@@ -16,5 +16,44 @@
 
 This is a library to simplify reconciliation of collections, in Go.
 Common use-case is to reconcile system state from 2 different sources, such as external API and internal data structures.
-This library can compute difference between to collections (slices or maps) and gives you back information about what was changed,
-what is new and what was removed.
+This library can compute difference between 2 collections (slices or maps) and gives you back information about what was changed,
+what's new and what was removed.
+
+## Example
+
+You can check unit test that tests similar thing [here](slice_test.go).
+
+```go
+type emp struct {
+    Name       string
+    Department string
+    Salary     int
+}
+
+sr := ForSlice[emp]().
+    WithEqualityFunc(DefaultEqualityFunc[emp]()).
+    WithIdentityFunc(func(left, right emp) bool {
+        return left.Name == right.Name
+    })
+
+left := []emp{
+    {Name: "Alice", Department: "HR", Salary: 10},
+    {Name: "Bob", Department: "IT", Salary: 10},
+    {Name: "Charlie", Department: "Toilets", Salary: 99},
+}
+right := []emp{
+    {Name: "Alice", Department: "HR", Salary: 10},
+    {Name: "Bob", Department: "IT", Salary: 20},
+    {Name: "Cyril", Department: "Sales", Salary: 10},
+    {Name: "Dave", Department: "Management", Salary: 1},
+}
+same, changed, onlyLeft, onlyRight := sr.Diff(left, right)
+
+fmt.Printf("Same: %v\n", same)
+fmt.Printf("Changed: %v\n", changed)
+fmt.Printf("Only in left: %v\n", onlyLeft)
+fmt.Printf("Only in right: %v\n", onlyRight)
+```
+
+Now you can act on changed items according to your business logic, e.g. create items in internal data structure based on what is missing or the opposite,
+remove items that are not present.
