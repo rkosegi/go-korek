@@ -25,6 +25,9 @@ import (
 // CompareFunc compares 2 values of the same type and return true if they are "same".
 type CompareFunc[T any] func(left, right T) bool
 
+// CompareDifferentFunc is used to compare different types
+type CompareDifferentFunc[T1 any, T2 any] func(left T1, right T2) bool
+
 // DefaultEqualityFunc uses github.com/google/go-cmp's Equal to perform equality check.
 func DefaultEqualityFunc[T any]() CompareFunc[T] {
 	return func(left, right T) bool {
@@ -48,10 +51,6 @@ type SliceReconciler[T any] interface {
 	// When omitted, then DefaultEqualityFunc is used to perform these equality checks.
 	WithEqualityFunc(fn CompareFunc[T]) SliceReconciler[T]
 
-	// WithIdentityFunc sets functions that is used to compare identity of 2 items.
-	// When omitted, identity check is delegated to equality check.
-	WithIdentityFunc(fn CompareFunc[T]) SliceReconciler[T]
-
 	// Diff takes 2 input slices of T and return 4 slices:
 	//  1, items that are "same" in both slices (according to equality func).
 	//  2, items that exists in both input slices, but they are not *same* (according to equality func).
@@ -60,6 +59,7 @@ type SliceReconciler[T any] interface {
 	Diff(left []T, right []T) (same []T, changed []T, onlyLeft []T, onlyRight []T)
 }
 
+// MapReconciler can be used to reconcile 2 maps of the same type (for both keys and values).
 type MapReconciler[K comparable, V any] interface {
 	// WithEqualityFunc sets CompareFunc that is used to compare equality of 2 objects.
 	// When omitted, then DefaultEqualityFunc is used to perform these equality checks.
@@ -71,4 +71,16 @@ type MapReconciler[K comparable, V any] interface {
 	// 3, keys that only exists in left input map.
 	// 4, keys that only exists in right input map.
 	Diff(left map[K]V, right map[K]V) (same []K, changed []K, onlyLeft []K, onlyRight []K)
+}
+
+// HybridSliceReconciler can be used to reconcile slices of different types.
+type HybridSliceReconciler[T1, T2 any] interface {
+	// Diff takes slice of T1 and slice of T2 and return 4 slices:
+	//  1, items that were found in left slice (of T1 type) and were at same time found in right slice (of T2 type),
+	//   and has "same" value, according to equality func.
+	//  2, items that exists in both left and right slice, but they do not have the "same" value,
+	//    according to equality func.
+	//  3, items that are present only in left input slice
+	//  4, items that are present only in right input slice
+	Diff(left []T1, right []T2) ([]T1, []T1, []T1, []T2)
 }

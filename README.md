@@ -24,24 +24,24 @@ what's new and what was removed.
 You can check unit test that tests similar thing [here](slice_test.go).
 
 ```go
-type emp struct {
+type empExt struct {
     Name       string
     Department string
     Salary     int
 }
 
-sr := ForSlice[emp]().
-    WithEqualityFunc(DefaultEqualityFunc[emp]()).
-    WithIdentityFunc(func(left, right emp) bool {
+sr := ForSlice[empExt]().
+    WithEqualityFunc(DefaultEqualityFunc[empExt]()).
+    WithIdentityFunc(func(left, right empExt) bool {
         return left.Name == right.Name
     })
 
-left := []emp{
+left := []empExt{
     {Name: "Alice", Department: "HR", Salary: 10},
     {Name: "Bob", Department: "IT", Salary: 10},
     {Name: "Charlie", Department: "Toilets", Salary: 99},
 }
-right := []emp{
+right := []empExt{
     {Name: "Alice", Department: "HR", Salary: 10},
     {Name: "Bob", Department: "IT", Salary: 20},
     {Name: "Cyril", Department: "Sales", Salary: 10},
@@ -56,4 +56,11 @@ fmt.Printf("Only in right: %v\n", onlyRight)
 ```
 
 Now you can act on changed items according to your business logic, e.g. create items in internal data structure based on what is missing or the opposite,
-remove items that are not present.
+remove items that are not present in external source.
+
+
+### FAQ
+
+- **Question**: I need to reconcile slice and map
+
+  **Answer**: You can use `lo.Values(mymap)` from [samber/lo](https://github.com/samber/lo) to have slice from `map` and then just reconcile 2 slices.

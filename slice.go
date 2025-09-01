@@ -28,25 +28,43 @@ func (s *sliceReconciler[T]) WithEqualityFunc(fn CompareFunc[T]) SliceReconciler
 	return s
 }
 
-func (s *sliceReconciler[T]) WithIdentityFunc(fn CompareFunc[T]) SliceReconciler[T] {
-	s.idFn = fn
-	return s
+func (s *sliceReconciler[T]) Diff(left []T, right []T) ([]T, []T, []T, []T) {
+	hr := hybridSliceReconciler[T, T]{
+		idFn: CompareDifferentFunc[T, T](s.idFn),
+		eqFn: CompareDifferentFunc[T, T](s.eqFn),
+	}
+	return hr.Diff(left, right)
 }
 
-func (s *sliceReconciler[T]) Diff(left []T, right []T) ([]T, []T, []T, []T) {
+// ForSlice creates SliceReconciler.
+// idFn is a function that is used to compare identity of 2 T items.
+func ForSlice[T any](idFn CompareFunc[T]) SliceReconciler[T] {
+	return &sliceReconciler[T]{
+		eqFn: DefaultEqualityFunc[T](),
+		idFn: idFn,
+	}
+}
+
+type hybridSliceReconciler[T1, T2 any] struct {
+	idFn CompareDifferentFunc[T1, T2]
+	eqFn CompareDifferentFunc[T1, T2]
+}
+
+func (h *hybridSliceReconciler[T1, T2]) Diff(left []T1, right []T2) ([]T1, []T1, []T1, []T2) {
 	var (
-		same      []T
-		changed   []T
-		onlyLeft  []T
-		onlyRight []T
+		same      []T1
+		changed   []T1
+		onlyLeft  []T1
+		onlyRight []T2
 	)
+
 	for _, leftItem := range left {
 		// try to find item in right slice based on identity predicate
-		if rightItem, exists := lo.Find(right, func(other T) bool {
-			return s.idFn(leftItem, other)
+		if rightItem, exists := lo.Find(right, func(other T2) bool {
+			return h.idFn(leftItem, other)
 		}); exists {
 			// now if it exists, it could be equal by value as well
-			if s.eqFn(leftItem, rightItem) {
+			if h.eqFn(leftItem, rightItem) {
 				// so it's "same"
 				same = append(same, leftItem)
 			} else {
@@ -60,8 +78,8 @@ func (s *sliceReconciler[T]) Diff(left []T, right []T) ([]T, []T, []T, []T) {
 	}
 	for _, rightItem := range right {
 		// try to find item in left slice based on identity predicate
-		if _, exists := lo.Find(left, func(other T) bool {
-			return s.idFn(rightItem, other)
+		if _, exists := lo.Find(left, func(other T1) bool {
+			return h.idFn(other, rightItem)
 		}); !exists {
 			// nope, it only exists in right slice
 			onlyRight = append(onlyRight, rightItem)
@@ -70,8 +88,15 @@ func (s *sliceReconciler[T]) Diff(left []T, right []T) ([]T, []T, []T, []T) {
 	return same, changed, onlyLeft, onlyRight
 }
 
-func ForSlice[T any]() SliceReconciler[T] {
-	return &sliceReconciler[T]{
-		eqFn: DefaultEqualityFunc[T](),
+// ForHybridSlices creates HybridSliceReconciler.
+// Following required arguments must be provided:
+//
+//	idFn is a function that is used to compare an identity of an instance of T1 and T2.
+//	eqFn is a function that is used to compare a "value" of an instance of T1 and T2.
+func ForHybridSlices[T1 any, T2 any](idFn CompareDifferentFunc[T1, T2],
+	eqFn CompareDifferentFunc[T1, T2]) HybridSliceReconciler[T1, T2] {
+	return &hybridSliceReconciler[T1, T2]{
+		idFn: idFn,
+		eqFn: eqFn,
 	}
 }
