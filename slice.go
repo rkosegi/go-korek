@@ -16,8 +16,6 @@ limitations under the License.
 
 package reconciler
 
-import "github.com/samber/lo"
-
 type sliceReconciler[T any] struct {
 	idFn CompareFunc[T]
 	eqFn CompareFunc[T]
@@ -45,6 +43,16 @@ func ForSlice[T any](idFn CompareFunc[T]) SliceReconciler[T] {
 	}
 }
 
+func find[T any](slice []T, fn func(item T) bool) (T, bool) {
+	for i := range slice {
+		if fn(slice[i]) {
+			return slice[i], true
+		}
+	}
+	var result T
+	return result, false
+}
+
 type hybridSliceReconciler[T1, T2 any] struct {
 	idFn CompareDifferentFunc[T1, T2]
 	eqFn CompareDifferentFunc[T1, T2]
@@ -60,7 +68,7 @@ func (h *hybridSliceReconciler[T1, T2]) Diff(left []T1, right []T2) ([]T1, []T1,
 
 	for _, leftItem := range left {
 		// try to find item in right slice based on identity predicate
-		if rightItem, exists := lo.Find(right, func(other T2) bool {
+		if rightItem, exists := find(right, func(other T2) bool {
 			return h.idFn(leftItem, other)
 		}); exists {
 			// now if it exists, it could be equal by value as well
@@ -78,7 +86,7 @@ func (h *hybridSliceReconciler[T1, T2]) Diff(left []T1, right []T2) ([]T1, []T1,
 	}
 	for _, rightItem := range right {
 		// try to find item in left slice based on identity predicate
-		if _, exists := lo.Find(left, func(other T1) bool {
+		if _, exists := find(left, func(other T1) bool {
 			return h.idFn(other, rightItem)
 		}); !exists {
 			// nope, it only exists in right slice
