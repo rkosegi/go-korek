@@ -32,6 +32,6 @@ repos:
         args:
           - -c=.yamllint.yaml
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.29.0
+    rev: v8.29.1
     hooks:
       - id: gitleaks
